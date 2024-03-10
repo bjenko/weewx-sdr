@@ -785,7 +785,7 @@ class Acurite606TXPacket(Packet):
         pkt = Packet.add_identifiers(pkt, sensor_id, Acurite606TXPacket.__name__)
         return pkt
 
-     
+
 class Acurite606TXPacketV2(Packet):
     # 2021-02-23: Acurite 606TX Temperature Sensor
     # {"time" : "2021-02-23 16:24:07", "model" : "Acurite-606TX", "id" : 153, "battery_ok" : 1, "temperature_C" : 18.800, "mic" : "CHECKSUM"}
@@ -807,7 +807,7 @@ class Acurite606TXPacketV2(Packet):
         pkt = Packet.add_identifiers(pkt, sensor_id, Acurite606TXPacketV2.__name__)
         return pkt
 
-      
+
 class AcuriteRain899Packet(Packet):
     # Sample data:
     # {"time" : "2019-12-05 16:32:20", "model" : "Acurite-Rain899", "id" : 1699, "channel" : 0, "battery_ok" : 0, "rain_mm" : 6.096}
@@ -1497,11 +1497,11 @@ class FOWH25Packet(Packet):
 class FOWH25BPacket(Packet):
     # This is for another WH25 (probably the EU-model or some kind of clone?)
     # IDENTIFIER is *almost* the same and some of the keys are named slightly different
-    
+
     # {"time" : "2020-08-01 14:03:16", "model" : "Fineoffset-WH25", "id" : 19, "battery_ok" : 1, "temperature_C" : 26.100, "humidity" : 49, "pressure_hPa" : 987.800, "mic" : "CRC"}
-    
+
     IDENTIFIER = "Fineoffset-WH25"
-    
+
     PARSEINFO = {
         'ID': ['station_id', None, lambda x: int(x)],
         'Temperature':
@@ -1755,7 +1755,7 @@ class FOWH65BAltPacket(Packet):
         pkt['light'] = Packet.get_float(obj, 'light_lux') # superfluous?
         pkt['battery'] = 0 if Packet.get_int(obj, 'battery_ok') == 1 else 0
         return FOWH65BAltPacket.insert_ids(pkt)
-    
+
     @staticmethod
     def insert_ids(pkt):
         station_id = pkt.pop('station_id', '0000')
@@ -1840,6 +1840,35 @@ class Hideki(object):
         sensor_id = "%s:%s" % (channel, code)
         pkt = Packet.add_identifiers(pkt, sensor_id, pkt_type)
         return pkt
+
+class HidekiTmpPacket(Packet):
+    IDENTIFIER = "Hideki-Temperature"
+    PARSEINFO = {
+        'Rolling Code': ['rolling_code', None, lambda x: int(x)],
+        'Channel': ['channel', None, lambda x: int(x)],
+        'Battery': ['battery', None, lambda x: 0 if x == 'OK' else 1],
+        'Temperature': [
+            'temperature', re.compile('([\d.-]+) C'), lambda x: float(x)]
+        }
+
+    @staticmethod
+    def parse_text(ts, payload, lines):
+        pkt = dict()
+        pkt['dateTime'] = ts
+        pkt['usUnits'] = weewx.METRIC
+        pkt.update(Packet.parse_lines(lines, HidekiTmpPacket.PARSEINFO))
+        return Hideki.insert_ids(pkt, HidekiTmpPacket.__name__)
+
+    @staticmethod
+    def parse_json(obj):
+        pkt = dict()
+        pkt['dateTime'] = Packet.parse_time(obj.get('time'))
+        pkt['usUnits'] = weewx.METRIC
+        pkt['rolling_code'] = obj.get('id')
+        pkt['channel'] = obj.get('channel')
+        pkt['temperature'] = Packet.get_float(obj, 'temperature_C')
+        pkt['battery'] = 0 if obj.get('battery_ok') == 1 else 1
+        return Hideki.insert_ids(pkt, HidekiTmpPacket.__name__)
 
 
 class HidekiTS04Packet(Packet):
@@ -2833,7 +2862,7 @@ class NexusTemperaturePacket(Packet):
     #    Temperature:     20.10 C
     #    Humidity:        42 %
 
-    IDENTIFIER = "Nexus Temperature"
+    IDENTIFIER = "Nexus-TH"
     PARSEINFO = {
         'House Code': ['house_code', None, lambda x: int(x)],
         'Battery': ['battery', None, lambda x: 0 if x == 'OK' else 1],
@@ -2888,7 +2917,7 @@ class Bresser5in1Packet(Packet):
     # "battery_ok" : 1, "temperature_C" : 17.000, "humidity" : 92,
     # "wind_max_m_s" : 4.000, "wind_avg_m_s" : 2.400, "wind_dir_deg" : 67.500,
     # "rain_mm" : 0.800, "mic" : "CHECKSUM"}
-    
+
     IDENTIFIER = "Bresser-5in1"
 
     @staticmethod
@@ -3038,7 +3067,7 @@ class TFATwinPlus303049Packet(Packet):
     # Temperature: 8.40 C
     # Humidity: 91 %
 
-    # {"time" : "2019-09-25 17:15:12", "model" : "TFA-Twin-Plus-30.3049", "id" : 13, "channel" : 1, "battery" : "OK", "temperature_C" : 8.400, "humidity" : 91, "mic" : "CHECK  SUM"} 
+    # {"time" : "2019-09-25 17:15:12", "model" : "TFA-Twin-Plus-30.3049", "id" : 13, "channel" : 1, "battery" : "OK", "temperature_C" : 8.400, "humidity" : 91, "mic" : "CHECK  SUM"}
 
     IDENTIFIER = "TFA-Twin-Plus-30.3049"
     PARSEINFO = {
@@ -3095,7 +3124,7 @@ class TSFT002Packet(Packet):
 
 class WS2032Packet(Packet):
     #{"time" : "2020-10-19 22:41:24", "model" : "WS2032", "id" : 11768, "temperature_C" : 3.800, "humidity" : 48, "wind_dir_deg" : 315.000, "wind_avg_km_h" : 7.740, "wind_max_km_h" : 15.480, "maybe_flags" : 0, "maybe_rain" : 256, "mic" : "CRC"}
-    
+
     IDENTIFIER = "WS2032"
 
     @staticmethod
@@ -3129,6 +3158,58 @@ class WT0124Packet(Packet):
         pkt['temperature'] = Packet.get_float(obj, 'temperature_C')
         pkt = Packet.add_identifiers(pkt, sensor_id, WT0124Packet.__name__)
         return pkt
+
+class Emos(object):
+    @staticmethod
+    def insert_ids(pkt, pkt_type):
+        channel = pkt.pop('channel', 0)
+        code = pkt.pop('house_code', 0)
+        sensor_id = "%s:%s" % (channel, code)
+        pkt = Packet.add_identifiers(pkt, sensor_id, pkt_type)
+        return pkt
+
+class EmosTmpPacket(Packet):
+    # 2023-10-01: EMOS-E06018 Temperature sensor
+    # rtl_433 JSON fromat
+    # {"time" : "2023-10-01 10:29:06", "model" : "EMOS-E6016", "id" : 44, "channel" : 2, "battery_ok" : 0, "temperature_C" : 24.900, "humidity" : 66, "wind_avg_m_s" : 0.000, "wind_dir_deg" : 0.000, "radio_clock" : "2023-10-01T12:29:04", "mic" : "CHECKSUM"}
+    #
+    # rtl_433 text fromat
+    # time      : 2023-10-01 12:43:37
+    # model     : EMOS-E6016   House Code: 44
+    # Channel   : 2            Battery_OK: 0             Temperature_C: 24.7       Humidity  : 66            WindSpeed m_s: 0.0        Wind direction: 0.0       Radio Clock: 2023-10-01T12:43:38
+    # Integrity : CHECKSUM
+
+    IDENTIFIER = "EMOS-E6016"
+    PARSEINFO = {
+        'House Code': ['house_code', None, lambda x: int(x)],
+        'Channel': ['channel', None, lambda x: int(x)],
+        'Battery_OK': ['battery', None, lambda x: 0 if x == 'OK' else 1],
+        'Temperature_C': [
+            'temperature', re.compile('([\d.-]+)'), lambda x: float(x)],
+        'Humidity':
+            ['humidity', re.compile('([\d.-]+)'), lambda x : float(x)]
+        }
+
+    @staticmethod
+    def parse_text(ts, payload, lines):
+        pkt = dict()
+        pkt['dateTime'] = ts
+        pkt['usUnits'] = weewx.METRIC
+        pkt.update(Packet.parse_lines(lines, EmosTmpPacket.PARSEINFO))
+        return Emos.insert_ids(pkt, EmosTmpPacket.__name__)
+
+    @staticmethod
+    def parse_json(obj):
+        pkt = dict()
+        pkt['dateTime'] = Packet.parse_time(obj.get('time'))
+        pkt['usUnits'] = weewx.METRIC
+        pkt['house_code'] = obj.get('id')
+        pkt['channel'] = obj.get('channel')
+        pkt['temperature'] = Packet.get_float(obj, 'temperature_C')
+        pkt['humidity'] = Packet.get_float(obj, 'humidity')
+        pkt['battery'] = 0 if obj.get('battery_ok') == 1 else 1
+        return Emos.insert_ids(pkt, EmosTmpPacket.__name__)
+
 
 class PacketFactory(object):
 
